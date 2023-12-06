@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -24,7 +25,7 @@ public class GameManager : MonoBehaviour
         {
             Instance = this;
             DontDestroyOnLoad(gameObject);
-            best = new User { name = "", score = 0 };
+            LoadBestScore();
         }
         else
         {
@@ -32,29 +33,14 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    public void SetName(string name)
+    private void OnDestroy()
     {
-        current = new User { name = name };
+        SaveBestScore();
     }
 
-    public string GetName()
+    public void GameOver()
     {
-        return current.name;
-    }
-
-    public string GetBestName()
-    {
-        return best.name;
-    }
-
-    public void SetScore(int score)
-    {
-        current.score = score;
-        if (score > best.score)
-        {
-            best.name = current.name;
-            best.score = score;
-        }
+        current.score = 0;
     }
 
     public void AddScore(int score)
@@ -66,15 +52,20 @@ public class GameManager : MonoBehaviour
             best.score = current.score;
         }
     }
-
-    public int GetScore()
+    public string GetScoreText()
     {
-        return current.score;
+        return $"Score: {current.score} - {current.name}";
     }
 
-    public int GetBestScore()
+    public string GetBestScoreText()
     {
-        return best.score;
+        return $"Best Score: {best.score} - {best.name}";
+    }
+
+    public void ResetBestScore()
+    {
+        best.name = "";
+        best.score = 0;
     }
 
     public void StartClicked()
@@ -86,7 +77,9 @@ public class GameManager : MonoBehaviour
             if (canvas.transform.GetChild(i).tag == "NameInput")
             {
                 GameObject inputField = canvas.transform.GetChild(i).gameObject;
-                name = inputField.GetComponent<TMP_InputField>().text;
+                name = inputField.GetComponent<TMP_InputField>().text.Trim();
+                if (name == "")
+                    return;
                 break;
             }
         }
@@ -96,5 +89,24 @@ public class GameManager : MonoBehaviour
             score = 0
         };
         SceneManager.LoadScene(1);
+    }
+
+    private const string saveFile = "best.json";
+    public void SaveBestScore()
+    {
+        string json = JsonUtility.ToJson(best);
+        File.WriteAllText(saveFile, json);
+    }
+    private void LoadBestScore()
+    {
+        if (File.Exists(saveFile))
+        {
+            string json = File.ReadAllText(saveFile);
+            best = JsonUtility.FromJson<User>(json);
+        }
+        else
+        {
+            best = new User { name = "", score = 0 };
+        }
     }
 }
